@@ -1,19 +1,17 @@
-# base image
-FROM node:alpine
+FROM node:14-alpine AS base
 
-# create & set working directory
-RUN mkdir -p /usr/src
-WORKDIR /usr/src
+RUN apk add --no-cache libc6-compat
 
-# copy source files
-COPY . /usr/src
+WORKDIR /app
 
-# install dependencies
-RUN npm install
+COPY . .
 
-# start app
-RUN npm run build
+RUN \
+  if [ -f yarn.lock ]; then yarn --frozen-lockfile && yarn build; \
+  elif [ -f package-lock.json ]; then npm ci && npm run build; \
+  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile && pnpm run build; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
 EXPOSE 3000
-ENV PORT 3000
-
-CMD ["node", "server.js"]
+CMD npm run start
